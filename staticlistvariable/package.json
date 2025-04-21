@@ -41,6 +41,15 @@
           },
           "name": "StaticListVariable"
         }
+      },
+      {
+        "kind": "Variable",
+        "spec": {
+          "display": {
+            "name": "Datasource Variable"
+          },
+          "name": "DatasourceVariable"
+        }
       }
     ]
   }

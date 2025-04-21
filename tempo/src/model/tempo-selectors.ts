@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { DatasourceSelector } from '@perses-dev/core';
+import { DatasourceSelectValue, isVariableDatasource } from '@perses-dev/plugin-system';
 
 export const TEMPO_DATASOURCE_KIND = 'TempoDatasource' as const;
 
@@ -30,13 +31,15 @@ export const DEFAULT_TEMPO: TempoDatasourceSelector = { kind: TEMPO_DATASOURCE_K
 /**
  * Returns true if the provided TempoDatasourceSelector is the default one.
  */
-export function isDefaultTempoSelector(selector: TempoDatasourceSelector): boolean {
-  return selector.name === undefined;
+export function isDefaultTempoSelector(datasourceSelectValue: DatasourceSelectValue): boolean {
+  return !isVariableDatasource(datasourceSelectValue) && datasourceSelectValue.name === undefined;
 }
 
 /**
  * Type guard to make sure a DatasourceSelector is a Tempo one.
  */
-export function isTempoDatasourceSelector(selector: DatasourceSelector): selector is TempoDatasourceSelector {
-  return selector.kind === TEMPO_DATASOURCE_KIND;
+export function isTempoDatasourceSelector(
+  datasourceSelectValue: DatasourceSelectValue
+): datasourceSelectValue is TempoDatasourceSelector {
+  return isVariableDatasource(datasourceSelectValue) || datasourceSelectValue.kind === TEMPO_DATASOURCE_KIND;
 }
