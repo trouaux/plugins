@@ -12,6 +12,7 @@
 // limitations under the License.
 
 import { DurationString } from '@perses-dev/core';
+import { DatasourceSelectValue } from '@perses-dev/plugin-system';
 import { PrometheusDatasourceSelector } from '../../model';
 
 /**
@@ -22,5 +23,5 @@ export interface PrometheusTimeSeriesQuerySpec {
   seriesNameFormat?: string;
   minStep?: DurationString;
   resolution?: number;
-  datasource?: PrometheusDatasourceSelector;
+  datasource?: DatasourceSelectValue<PrometheusDatasourceSelector>;
 }
