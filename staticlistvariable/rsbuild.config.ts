@@ -36,7 +36,6 @@ export default defineConfig({
           name: 'StaticListVariable',
           exposes: {
             './StaticListVariable': './src/StaticListVariable.tsx',
-            './DatasourceVariable': './src/DatasourceVariable.tsx',
           },
           shared: {
             react: { requiredVersion: '18.2.0', singleton: true },
