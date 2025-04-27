@@ -13,10 +13,9 @@
 
 package migrate
 
-#grafanaType: "text"
 #var:       _
 
-if #var.type == "custom" || #var.type == "interval" {
+if #var.type == "datasource" {
   kind: "DatasourceVariable",
   spec: {
     datasourcePluginKind: #var.query

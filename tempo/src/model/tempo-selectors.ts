@@ -29,14 +29,14 @@ export interface TempoDatasourceSelector extends DatasourceSelector {
 export const DEFAULT_TEMPO: TempoDatasourceSelector = { kind: TEMPO_DATASOURCE_KIND };
 
 /**
- * Returns true if the provided TempoDatasourceSelector is the default one.
+ * Returns true if the provided datasourceSelectValue is the default TempoDatasourceSelector.
  */
 export function isDefaultTempoSelector(datasourceSelectValue: DatasourceSelectValue): boolean {
   return !isVariableDatasource(datasourceSelectValue) && datasourceSelectValue.name === undefined;
 }
 
 /**
- * Type guard to make sure a DatasourceSelector is a Tempo one.
+ * Type guard to make sure a datasourceSelectValue is a Tempo one.
  */
 export function isTempoDatasourceSelector(
   datasourceSelectValue: DatasourceSelectValue
