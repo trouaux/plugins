@@ -19,37 +19,33 @@ type StaticListVariableOptions = {
   datasourcePluginKind: string;
 };
 
+const EMPTY_SELECTED_KIND = { label: '', value: '' };
+
 const DatasourceVariableOptionEditor = (props: OptionsEditorProps<StaticListVariableOptions>) => {
   const { onChange, value } = props;
   const { datasourcePluginKind } = value;
-  const { data: datasourcePlugins, isLoading } = useListPluginMetadata(['Datasource']);
+  const { data: datasourcePlugins } = useListPluginMetadata(['Datasource']);
+
   const datasourcePluginKindSet = useMemo(
     () => new Set(datasourcePlugins?.map((plugin) => plugin.spec.name)),
     [datasourcePlugins]
   );
-
-  useEffect(() => {
-    if (datasourcePluginKind === '' && datasourcePluginKindSet.size > 0) {
-      onChange({
-        datasourcePluginKind: Array.from(datasourcePluginKindSet)[0],
-      });
-    }
-  }, [datasourcePluginKindSet, datasourcePluginKind, onChange]);
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
-
-  if (datasourcePlugins === undefined) {
-    return <div>No data</div>;
-  }
 
   const options = Array.from(datasourcePluginKindSet).map((kind) => ({
     label: kind,
     value: kind,
   }));
 
-  const selectedKind = options.find((option) => option.label === datasourcePluginKind) ?? options[0];
+  const selectedKind = options.find((option) => option.label === datasourcePluginKind) ?? EMPTY_SELECTED_KIND;
+
+  // If there is no selected kind and there are available options, select the first one
+  useEffect(() => {
+    if (selectedKind.value === EMPTY_SELECTED_KIND.value && datasourcePluginKindSet.size > 0) {
+      onChange({
+        datasourcePluginKind: Array.from(datasourcePluginKindSet)[0],
+      });
+    }
+  }, [selectedKind, datasourcePluginKind, onChange, datasourcePluginKindSet]);
 
   return (
     <Autocomplete

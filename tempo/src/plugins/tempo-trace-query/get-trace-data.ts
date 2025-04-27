@@ -58,7 +58,7 @@ export const getTraceData: TraceQueryPlugin<TempoTraceQuerySpec>['getTraceData']
     datasourceSelectValueToSelector(spec.datasource, context.variableState, listDatasourceSelectItems) ??
     defaultTempoDatasource;
 
-  const client: TempoClient = await context.datasourceStore.getDatasourceClient(datasourceSelector);
+  const client = await context.datasourceStore.getDatasourceClient<TempoClient>(datasourceSelector);
 
   const getQuery = (): SearchRequestParameters => {
     const params: SearchRequestParameters = {

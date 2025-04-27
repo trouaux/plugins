@@ -1,4 +1,4 @@
-# Perses Panel Plugin
+# DatasourceVariable Plugin  
 
 ## Setup
 
