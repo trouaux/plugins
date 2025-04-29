@@ -1,7 +1,7 @@
 {
-  "name": "@perses-dev/datasource-variable",
+  "name": "@perses-dev/datasource-variable-plugin",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.1.0",
   "scripts": {
     "dev": "rsbuild dev",
     "build": "rsbuild build",
@@ -10,8 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@module-federation/enhanced": "^0.8.9",
-    "color-hash": "^2.0.2"
+    "@module-federation/enhanced": "^0.8.9"
   },
   "peerDependencies": {
     "@emotion/react": "^11.7.1",
