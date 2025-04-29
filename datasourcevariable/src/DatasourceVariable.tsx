@@ -83,4 +83,5 @@ export const DatasourceVariable: VariablePlugin<StaticListVariableOptions> = {
   },
   OptionsEditorComponent: DatasourceVariableOptionEditor,
   createInitialOptions: () => ({ datasourcePluginKind: '' }),
+  dependsOn: () => ({ variables: [] }),
 };
