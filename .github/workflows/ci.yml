@@ -163,8 +163,8 @@ jobs:
         with:
           name: archives
       - run: go run ./scripts/upload-archive/upload-archive.go -tag=${{ github.event.release.tag_name }}
-      - name: Publish CUE module
-        run: go run ./scripts/cue-publish/cue-publish.go -tag=${{ github.event.release.tag_name }} -token=${{ secrets.CUE_REG_TOKEN }}
+      # - name: Publish CUE module
+      #   run: go run ./scripts/cue-publish/cue-publish.go -tag=${{ github.event.release.tag_name }} -token=${{ secrets.CUE_REG_TOKEN }}
       - name: Publish npm package
         run: go run ./scripts/npm-publish/npm-publish.go -tag=${{ github.event.release.tag_name }}
         env:
