@@ -37,8 +37,11 @@ func main() {
 	}
 	pluginName := manifest.Name
 	filePath := filepath.Join(pluginFolderName, fmt.Sprintf("%s-%s.tar.gz", pluginName, version))
-	if execErr := exec.Command("npm", "publish", "--access", "public", filePath).Run(); execErr != nil {
-		logrus.WithError(execErr).Fatalf("unable to publish archive %s to npm", pluginName)
+	cmd := exec.Command("npm", "publish", "--access", "public", filePath)
+	output, execErr := cmd.CombinedOutput()
+	if execErr != nil {
+		logrus.WithError(execErr).Fatalf("unable to publish archive %s to npm. Output:\n%s", pluginName, string(output))
 	}
-	logrus.Infof("Plugin %s@%s published to npm", manifest.Metadata.BuildInfo.Name, version)
+	logrus.Infof("Plugin %s@%s published to npm. Output:\n%s", manifest.Name, version, string(output))
+
 }
