@@ -15,9 +15,7 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/perses/plugins/scripts/npm"
 	"github.com/perses/plugins/scripts/tag"
@@ -36,8 +34,8 @@ func main() {
 		logrus.WithError(err).Fatalf("unable to read manifest file for plugin %s", pluginFolderName)
 	}
 	pluginName := manifest.Name
-	filePath := filepath.Join(pluginFolderName, fmt.Sprintf("%s-%s.tar.gz", pluginName, version))
-	cmd := exec.Command("npm", "publish", "--access", "public", filePath)
+
+	cmd := exec.Command("npm", "publish", "--access", "public", pluginFolderName)
 	output, execErr := cmd.CombinedOutput()
 	if execErr != nil {
 		logrus.WithError(execErr).Fatalf("unable to publish archive %s to npm. Output:\n%s", pluginName, string(output))
