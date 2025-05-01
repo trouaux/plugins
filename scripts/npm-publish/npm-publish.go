@@ -15,6 +15,7 @@ package main
 
 import (
 	"flag"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -34,13 +35,28 @@ func main() {
 	if err != nil {
 		logrus.WithError(err).Fatalf("unable to read manifest file for plugin %s", pluginFolderName)
 	}
-	pluginName := manifest.Name
+	pluginName := manifest.Metadata.BuildInfo.Name
 	pluginPath := filepath.Join(pluginFolderName, "dist")
-	cmd := exec.Command("npm", "publish", "--access", "public", pluginPath)
+
+	originalDir, err := os.Getwd()
+	if err != nil {
+		logrus.WithError(err).Fatal("unable to get current working directory")
+	}
+	if err := os.Chdir(pluginPath); err != nil {
+		logrus.WithError(err).Fatalf("unable to change directory to %s", pluginPath)
+	}
+	// Defer changing back to the original directory if needed
+	defer func() {
+		if err := os.Chdir(originalDir); err != nil {
+			logrus.WithError(err).Warnf("unable to change directory back to %s", originalDir)
+		}
+	}()
+
+	cmd := exec.Command("npm", "publish", "--access", "public")
 	output, execErr := cmd.CombinedOutput()
 	if execErr != nil {
 		logrus.WithError(execErr).Fatalf("unable to publish archive %s to npm. Output:\n%s", pluginName, string(output))
 	}
-	logrus.Infof("Plugin %s@%s published to npm. Output:\n%s", manifest.Name, version, string(output))
+	logrus.Infof("Plugin %s@%s published to npm. Output:\n%s", pluginName, version, string(output))
 
 }
