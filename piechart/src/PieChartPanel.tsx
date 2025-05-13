@@ -11,24 +11,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import { Box, useTheme } from '@mui/material';
 import {
+  ChartInstance,
+  ContentWithLegend,
+  LegendItem,
+  LegendProps,
   PieChart,
   PieChartData,
-  useChartsTheme,
-  ContentWithLegend,
   SelectedLegendItemState,
-  LegendProps,
-  ChartInstance,
+  useChartsTheme,
   useId,
-  LegendItem,
 } from '@perses-dev/components';
-import { Box, useTheme } from '@mui/material';
-import { useMemo, useState, useRef, ReactElement } from 'react';
 import { CalculationType, CalculationsMap, DEFAULT_LEGEND, TimeSeriesData } from '@perses-dev/core';
-import { validateLegendSpec, PanelProps } from '@perses-dev/plugin-system';
+import { PanelProps, validateLegendSpec } from '@perses-dev/plugin-system';
 import merge from 'lodash/merge';
+import { ReactElement, useMemo, useRef, useState } from 'react';
 import { getSeriesColor } from './palette-gen';
-import { DEFAULT_VISUAL, QuerySettingsOptions } from './model';
 import { PieChartOptions } from './pie-chart-model';
 import { calculatePercentages, sortSeriesData } from './utils';
 
@@ -36,7 +35,7 @@ export type PieChartPanelProps = PanelProps<PieChartOptions, TimeSeriesData>;
 
 export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
   const {
-    spec: { calculation, sort, mode, querySettings: querySettingsList },
+    spec: { calculation, sort, mode },
     contentDimensions,
     queryResults,
   } = props;
@@ -45,10 +44,6 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
   const PADDING = chartsTheme.container.padding.default;
   const chartId = useId('time-series-panel');
   const categoricalPalette = chartsTheme.echartsTheme.color;
-
-  const visual = useMemo(() => {
-    return merge({}, DEFAULT_VISUAL, props.spec.visual);
-  }, [props.spec.visual]);
 
   const { pieChartData, legendItems } = useMemo(() => {
     const calculate = CalculationsMap[calculation as CalculationType];
@@ -59,25 +54,11 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
       const result = queryResults[queryIndex];
 
       let seriesIndex = 0;
-      for (const seriesData of result.data.series) {
-        // Retrieve querySettings for this query, if exists.
-        // queries & querySettings indices do not necessarily match, so we have to check the tail value of the $ref attribute
-        let querySettings: QuerySettingsOptions | undefined;
-        for (const item of querySettingsList ?? []) {
-          if (item.queryIndex === queryIndex) {
-            querySettings = item;
-            // We don't break the loop here just in case there are multiple querySettings defined for the
-            // same queryIndex, because in that case we want the last one to take precedence.
-          }
-        }
+      for (const seriesData of result?.data.series ?? []) {
         const seriesColor = getSeriesColor({
           categoricalPalette: categoricalPalette as string[],
-          visual,
           muiPrimaryColor: muiTheme.palette.primary.main,
           seriesName: seriesData.name,
-          seriesIndex,
-          querySettings: querySettings,
-          queryHasMultipleResults: (queryResults[queryIndex]?.data?.series?.length ?? 0) > 1,
         });
         const series = {
           value: calculate(seriesData.values) ?? null,
@@ -109,17 +90,7 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
       pieChartData: sortedPieChartData,
       legendItems,
     };
-  }, [
-    calculation,
-    sort,
-    mode,
-    queryResults,
-    categoricalPalette,
-    visual,
-    muiTheme.palette.primary.main,
-    chartId,
-    querySettingsList,
-  ]);
+  }, [calculation, sort, mode, queryResults, categoricalPalette, muiTheme.palette.primary.main, chartId]);
 
   const contentPadding = chartsTheme.container.padding.default;
   const adjustedContentDimensions: typeof contentDimensions = contentDimensions
