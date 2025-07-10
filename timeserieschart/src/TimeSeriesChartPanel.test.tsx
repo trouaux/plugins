@@ -72,6 +72,8 @@ describe('TimeSeriesChartPanel', () => {
       absoluteTimeRange: toAbsoluteTimeRange(TEST_TIME_RANGE),
       refresh: jest.fn(),
       refreshKey: `${TEST_TIME_RANGE.pastDuration}:0`,
+      timeZone: 'UTC',
+      setTimeZone: () => ({}),
     };
 
     render(

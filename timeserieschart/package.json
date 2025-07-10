@@ -24,7 +24,8 @@
   "module": "lib/index.js",
   "types": "lib/index.d.ts",
   "dependencies": {
-    "color-hash": "^2.0.2"
+    "color-hash": "^2.0.2",
+    "@perses-dev/plugin-system": "v0.0.0-snapshot-time-zone-selector-946f408"
   },
   "peerDependencies": {
     "@emotion/react": "^11.7.1",
@@ -32,7 +33,6 @@
     "@hookform/resolvers": "^3.2.0",
     "@perses-dev/components": "^0.51.0-rc.1",
     "@perses-dev/core": "^0.51.0-rc.1",
-    "@perses-dev/plugin-system": "^0.51.0-rc.1",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "echarts": "5.5.0",
