@@ -13,21 +13,20 @@
 
 import { ReactElement, useMemo } from 'react';
 import { Divider, Link, List, ListItem, ListItemText } from '@mui/material';
-import { Link as RouterLink } from 'react-router-dom';
 import { otlpcommonv1 } from '@perses-dev/core';
+import { replaceVariablesInString, useAllVariableValues, useRouterContext } from '@perses-dev/plugin-system';
 import { Span, Trace } from '../trace';
 import { formatDuration } from '../utils';
-
-export type AttributeLinks = Record<string, (attributes: Record<string, otlpcommonv1.AnyValue>) => string>;
+import { CustomLinks } from '../../gantt-chart-model';
 
 export interface TraceAttributesProps {
+  customLinks?: CustomLinks;
   trace: Trace;
   span: Span;
-  attributeLinks?: AttributeLinks;
 }
 
 export function TraceAttributes(props: TraceAttributesProps) {
-  const { trace, span, attributeLinks } = props;
+  const { customLinks, trace, span } = props;
 
   return (
     <>
@@ -39,40 +38,77 @@ export function TraceAttributes(props: TraceAttributesProps) {
       <Divider />
       {span.attributes.length > 0 && (
         <>
-          <AttributeList attributeLinks={attributeLinks} attributes={span.attributes} />
+          <AttributeList
+            customLinks={customLinks}
+            attributes={span.attributes.toSorted((a, b) => a.key.localeCompare(b.key))}
+          />
           <Divider />
         </>
       )}
-      <AttributeList attributeLinks={attributeLinks} attributes={span.resource.attributes} />
+      <AttributeList
+        customLinks={customLinks}
+        attributes={span.resource.attributes.toSorted((a, b) => a.key.localeCompare(b.key))}
+      />
     </>
   );
 }
 
 export interface AttributeListProps {
-  attributeLinks?: AttributeLinks;
+  customLinks?: CustomLinks;
   attributes: otlpcommonv1.KeyValue[];
 }
 
 export function AttributeList(props: AttributeListProps): ReactElement {
-  const { attributeLinks, attributes } = props;
-  const attributesMap = useMemo(
-    () => Object.fromEntries(attributes.map((attr) => [attr.key, attr.value])),
-    [attributes]
-  );
+  const { customLinks, attributes } = props;
 
   return (
     <List>
-      {attributes
-        .sort((a, b) => a.key.localeCompare(b.key))
-        .map((attribute, i) => (
-          <AttributeItem
-            key={i}
-            name={attribute.key}
-            value={renderAttributeValue(attribute.value)}
-            link={attributeLinks?.[attribute.key]?.(attributesMap)}
-          />
-        ))}
+      <AttributeItems customLinks={customLinks} attributes={attributes} />
     </List>
+  );
+}
+
+interface AttributeItemsProps {
+  customLinks?: CustomLinks;
+  attributes: otlpcommonv1.KeyValue[];
+}
+
+export function AttributeItems(props: AttributeItemsProps): ReactElement {
+  const { customLinks, attributes } = props;
+  const variableValues = useAllVariableValues();
+
+  // turn array into map for fast access
+  const attributeLinks = useMemo(() => {
+    const attrs = (customLinks?.links.attributes ?? []).map((a) => [a.name, a.link]);
+    return Object.fromEntries(attrs);
+  }, [customLinks]);
+
+  // some links require access to other attributes, for example a pod link "/namespace/${k8s_namespace_name}/pod/${k8s_pod_name}"
+  const extraVariables = useMemo(() => {
+    // replace dot with underscore in attribute name, because dot is not allowed in variable names
+    const stringAttrs = attributes.map((attr) => [attr.key.replaceAll('.', '_'), renderAttributeValue(attr.value)]);
+
+    return {
+      ...customLinks?.variables,
+      ...Object.fromEntries(stringAttrs),
+    };
+  }, [customLinks, attributes]);
+
+  return (
+    <>
+      {attributes.map((attribute, i) => (
+        <AttributeItem
+          key={i}
+          name={attribute.key}
+          value={renderAttributeValue(attribute.value)}
+          link={
+            attributeLinks[attribute.key]
+              ? replaceVariablesInString(attributeLinks[attribute.key], variableValues, extraVariables)
+              : undefined
+          }
+        />
+      ))}
+    </>
   );
 }
 
@@ -82,19 +118,21 @@ interface AttributeItemProps {
   link?: string;
 }
 
-function AttributeItem(props: AttributeItemProps): ReactElement {
+export function AttributeItem(props: AttributeItemProps): ReactElement {
   const { name, value, link } = props;
+  const { RouterComponent } = useRouterContext();
 
-  const valueComponent = link ? (
-    <Link component={RouterLink} to={link}>
-      {value}
-    </Link>
-  ) : (
-    value
-  );
+  const valueComponent =
+    RouterComponent && link ? (
+      <Link component={RouterComponent} to={link}>
+        {value}
+      </Link>
+    ) : (
+      value
+    );
 
   return (
-    <ListItem disablePadding>
+    <ListItem sx={{ px: 1, py: 0 }}>
       <ListItemText
         primary={name}
         secondary={valueComponent}

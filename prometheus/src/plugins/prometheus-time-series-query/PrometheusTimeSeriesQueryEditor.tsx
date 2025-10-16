@@ -21,7 +21,7 @@ import {
 } from '@perses-dev/plugin-system';
 import { useId } from '@perses-dev/components';
 import { FormControl, Stack, TextField } from '@mui/material';
-import { ReactElement } from 'react';
+import { ReactElement, useCallback } from 'react';
 import {
   DEFAULT_PROM,
   DurationString,
@@ -44,8 +44,14 @@ import {
  * The options editor component for editing a PrometheusTimeSeriesQuery's spec.
  */
 export function PrometheusTimeSeriesQueryEditor(props: PrometheusTimeSeriesQueryEditorProps): ReactElement {
-  const { onChange, value } = props;
-  const { datasource } = value;
+  const {
+    onChange,
+    value,
+    value: { query, datasource },
+    queryHandlerSettings,
+    isReadonly,
+  } = props;
+
   const datasourceSelectValue = datasource ?? DEFAULT_PROM;
 
   const datasourceSelectLabelID = useId('prom-datasource-label'); // for panels with multiple queries, this component is rendered multiple times on the same page
@@ -69,6 +75,10 @@ export function PrometheusTimeSeriesQueryEditor(props: PrometheusTimeSeriesQuery
 
   const handleDatasourceChange: DatasourceSelectProps['onChange'] = (next) => {
     if (isPrometheusDatasourceSelector(next)) {
+      /* Good to know: The usage of onchange here causes an immediate spec update which eventually updates the panel
+         This was probably intentional to allow for quick switching between datasources.
+         Could have been triggered only with Run Query button as well.
+      */
       onChange(
         produce(value, (draft) => {
           // If they're using the default, just omit the datasource prop (i.e. set to undefined)
@@ -76,11 +86,41 @@ export function PrometheusTimeSeriesQueryEditor(props: PrometheusTimeSeriesQuery
           draft.datasource = nextDatasource;
         })
       );
+      if (queryHandlerSettings?.setWatchOtherSpecs)
+        queryHandlerSettings.setWatchOtherSpecs({ ...value, datasource: next });
       return;
     }
 
     throw new Error('Got unexpected non-Prometheus datasource selector');
   };
+
+  const handlePromQlEditorChanges = useCallback(
+    (e: string) => {
+      handleQueryChange(e);
+      if (queryHandlerSettings?.watchQueryChanges) {
+        queryHandlerSettings?.watchQueryChanges(e);
+      }
+    },
+    [queryHandlerSettings, handleQueryChange]
+  );
+
+  const handleLegendSpecChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      handleFormatChange(e.target.value);
+      if (queryHandlerSettings?.setWatchOtherSpecs)
+        queryHandlerSettings.setWatchOtherSpecs({ ...value, seriesNameFormat: e.target.value });
+    },
+    [queryHandlerSettings, handleFormatChange, value]
+  );
+
+  const handleMinStepSpecChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      handleMinStepChange(e.target.value ? (e.target.value as DurationString) : undefined);
+      if (queryHandlerSettings?.setWatchOtherSpecs)
+        queryHandlerSettings.setWatchOtherSpecs({ ...value, minStep: e.target.value });
+    },
+    [queryHandlerSettings, handleMinStepChange, value]
+  );
 
   return (
     <Stack spacing={2}>
@@ -92,14 +132,16 @@ export function PrometheusTimeSeriesQueryEditor(props: PrometheusTimeSeriesQuery
           labelId={datasourceSelectLabelID}
           label="Prometheus Datasource"
           notched
+          readOnly={isReadonly}
         />
       </FormControl>
       <PromQLEditor
         completeConfig={{ remote: { url: promURL } }}
-        value={value.query} // here we are passing `value.query` and not `query` from useQueryState in order to get updates only on onBlur events
+        value={query} // here we are passing `value.query` and not `query` from useQueryState in order to get updates only on onBlur events
         datasource={selectedDatasource}
-        onChange={handleQueryChange}
-        onBlur={handleQueryBlur}
+        onChange={handlePromQlEditorChanges}
+        onBlur={queryHandlerSettings?.runWithOnBlur ? handleQueryBlur : undefined}
+        isReadOnly={isReadonly}
       />
       <Stack direction="row" spacing={2}>
         <TextField
@@ -108,17 +150,25 @@ export function PrometheusTimeSeriesQueryEditor(props: PrometheusTimeSeriesQuery
           placeholder="Example: '{{instance}}' will generate series names like 'webserver-123', 'webserver-456'..."
           helperText="Text to be displayed in the legend and the tooltip. Use {{label_name}} to interpolate label values."
           value={format ?? ''}
-          onChange={(e) => handleFormatChange(e.target.value)}
-          onBlur={handleFormatBlur}
+          onChange={handleLegendSpecChange}
+          onBlur={queryHandlerSettings?.runWithOnBlur ? handleFormatBlur : undefined}
+          slotProps={{
+            inputLabel: { shrink: isReadonly ? true : undefined },
+            input: { readOnly: isReadonly },
+          }}
         />
         <TextField
           label="Min Step"
           placeholder={minStepPlaceholder}
           helperText="Lower bound for the step. If not provided, the scrape interval of the datasource is used."
-          value={minStep}
-          onChange={(e) => handleMinStepChange(e.target.value as DurationString)}
-          onBlur={handleMinStepBlur}
+          value={minStep ?? ''}
+          onChange={handleMinStepSpecChange}
+          onBlur={queryHandlerSettings?.runWithOnBlur ? handleMinStepBlur : undefined}
           sx={{ width: '250px' }}
+          slotProps={{
+            inputLabel: { shrink: isReadonly ? true : undefined },
+            input: { readOnly: isReadonly },
+          }}
         />
       </Stack>
     </Stack>

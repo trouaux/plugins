@@ -15,6 +15,11 @@ import { Definition, ThresholdOptions, FormatOptions } from '@perses-dev/core';
 import { OptionsEditorProps, LegendSpecOptions } from '@perses-dev/plugin-system';
 
 /**
+ * Line style options for time series charts.
+ */
+export type LineStyleType = 'solid' | 'dashed' | 'dotted';
+
+/**
  * The schema for a TimeSeriesChart panel.
  */
 export interface TimeSeriesChartDefinition extends Definition<TimeSeriesChartOptions> {
@@ -35,8 +40,10 @@ export interface TimeSeriesChartOptions {
 
 export interface QuerySettingsOptions {
   queryIndex: number;
-  colorMode: 'fixed' | 'fixed-single';
-  colorValue: string;
+  colorMode?: 'fixed' | 'fixed-single';
+  colorValue?: string;
+  lineStyle?: LineStyleType;
+  areaOpacity?: number;
 }
 
 export type TimeSeriesChartOptionsEditorProps = OptionsEditorProps<TimeSeriesChartOptions>;
@@ -60,6 +67,7 @@ export interface TimeSeriesChartPaletteOptions {
 export type TimeSeriesChartVisualOptions = {
   display?: 'line' | 'bar';
   lineWidth?: number;
+  lineStyle?: LineStyleType;
   areaOpacity?: number;
   showPoints?: 'auto' | 'always';
   palette?: TimeSeriesChartPaletteOptions;
@@ -89,17 +97,19 @@ export const Y_AXIS_CONFIG = {
   max: { label: 'Max' },
 };
 
+export const DEFAULT_DISPLAY = 'line';
 export const DEFAULT_LINE_WIDTH = 1.25;
+export const DEFAULT_LINE_STYLE = 'solid';
 export const DEFAULT_AREA_OPACITY = 0;
-
 // How much larger datapoint symbols are than line width, also applied in VisualOptionsEditor.
 export const POINT_SIZE_OFFSET = 1.5;
 export const DEFAULT_POINT_RADIUS = DEFAULT_LINE_WIDTH + POINT_SIZE_OFFSET;
-
 export const DEFAULT_CONNECT_NULLS = false;
 
 export const DEFAULT_VISUAL: TimeSeriesChartVisualOptions = {
+  display: DEFAULT_DISPLAY,
   lineWidth: DEFAULT_LINE_WIDTH,
+  lineStyle: DEFAULT_LINE_STYLE,
   areaOpacity: DEFAULT_AREA_OPACITY,
   pointRadius: DEFAULT_POINT_RADIUS,
   connectNulls: DEFAULT_CONNECT_NULLS,
@@ -116,6 +126,9 @@ export const VISUAL_CONFIG = {
     min: 0.25,
     max: 3,
     step: 0.25,
+  },
+  lineStyle: {
+    label: 'Line Style',
   },
   pointRadius: {
     label: 'Point Radius',
@@ -155,6 +168,20 @@ export const STACK_OPTIONS = Object.entries(STACK_CONFIG).map(([id, config]) => 
     ...config,
   };
 });
+
+export const LINE_STYLE_CONFIG = {
+  solid: { label: 'Solid' },
+  dashed: { label: 'Dashes' },
+  dotted: { label: 'Dots' },
+};
+
+export const OPACITY_CONFIG = {
+  label: 'Opacity',
+  testId: 'slider-opacity',
+  min: 0,
+  max: 1,
+  step: 0.05,
+};
 
 // Both of these constants help produce a value that is LESS THAN the initial value.
 // For positive values, we multiply by a number less than 1 to get this outcome.

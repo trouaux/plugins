@@ -45,6 +45,9 @@ export interface Completions {
   to?: number;
 }
 
+const quoteChars = ['"', '`'];
+const defaultQuoteChar = '"';
+
 export async function complete(
   completionCfg: CompletionConfig,
   { state, pos }: CompletionContext
@@ -179,7 +182,7 @@ export function identifyCompletions(state: EditorState, pos: number, tree: Tree)
         const fieldExpr = node.parent.firstChild;
         const attribute = state.sliceDoc(fieldExpr.from, fieldExpr.to);
         // ignore leading " in { name="HT
-        const from = state.sliceDoc(node.from, node.from + 1) === '"' ? node.from + 1 : node.from;
+        const from = quoteChars.includes(state.sliceDoc(node.from, node.from + 1)) ? node.from + 1 : node.from;
         return { scopes: [{ kind: 'TagValue', tag: attribute }], from };
       }
 
@@ -249,6 +252,19 @@ async function completeTagName(
   return response.scopes.flatMap((scope) => scope.tags).map((tag) => ({ label: tag }));
 }
 
+function escapeString(input: string, quoteChar: string) {
+  // do not escape raw strings (when using backticks)
+  if (quoteChar === '`') {
+    return input;
+  }
+
+  let escaped = input;
+  // escape sequences: https://grafana.com/docs/tempo/v2.8.x/traceql/construct-traceql-queries/#quoted-attribute-names
+  escaped = escaped.replaceAll('\\', '\\\\');
+  escaped = escaped.replaceAll('"', '\\"');
+  return escaped;
+}
+
 /**
  * Add quotes to the completion text in case quotes are not present already.
  * This handles the following cases:
@@ -256,14 +272,24 @@ async function completeTagName(
  * { name="x
  * { name="x" where cursor is after the 'x'
  */
-function applyQuotedCompletion(view: EditorView, completion: Completion, from: number, to: number): void {
-  let insertText = completion.label;
-  if (view.state.sliceDoc(from - 1, from) !== '"') {
-    insertText = '"' + insertText;
+export function applyQuotedCompletion(view: EditorView, completion: Completion, from: number, to: number): void {
+  let quoteChar = defaultQuoteChar;
+  if (quoteChars.includes(view.state.sliceDoc(from - 1, from))) {
+    quoteChar = view.state.sliceDoc(from - 1, from);
+    from--;
   }
-  if (view.state.sliceDoc(to, to + 1) !== '"') {
-    insertText = insertText + '"';
+  if (quoteChars.includes(view.state.sliceDoc(to, to + 1))) {
+    quoteChar = view.state.sliceDoc(to, to + 1);
+    to++;
   }
+
+  // When using raw strings (`), we cannot escape a backtick.
+  // Therefore, switch the quote character.
+  if (completion.label.includes('`')) {
+    quoteChar = '"';
+  }
+
+  const insertText = `${quoteChar}${escapeString(completion.label, quoteChar)}${quoteChar}`;
   view.dispatch(insertCompletionText(view.state, insertText, from, to));
 }
 

@@ -18,9 +18,12 @@ import { Panel } from '@perses-dev/dashboards';
 import { useExplorerManagerContext } from '@perses-dev/explore';
 import { DataQueriesProvider, MultiQueryEditor, useDataQueries } from '@perses-dev/plugin-system';
 import { ReactElement } from 'react';
+import { TempoTraceQuerySpec } from '../model';
+import { linkToSpan, linkToTrace } from './links';
 
 interface TracesExplorerQueryParams {
   queries?: QueryDefinition[];
+  spanId?: string;
 }
 
 interface SearchResultsPanelProps {
@@ -58,7 +61,16 @@ function SearchResultsPanel({ queries }: SearchResultsPanelProps): ReactElement 
           }}
           definition={{
             kind: 'Panel',
-            spec: { queries, display: { name: '' }, plugin: { kind: 'ScatterChart', spec: {} } },
+            spec: {
+              queries,
+              display: { name: '' },
+              plugin: {
+                kind: 'ScatterChart',
+                spec: {
+                  link: linkToTrace,
+                },
+              },
+            },
           }}
         />
       </Box>
@@ -69,22 +81,52 @@ function SearchResultsPanel({ queries }: SearchResultsPanelProps): ReactElement 
         }}
         definition={{
           kind: 'Panel',
-          spec: { queries, display: { name: '' }, plugin: { kind: 'TraceTable', spec: {} } },
+          spec: {
+            queries,
+            display: { name: '' },
+            plugin: {
+              kind: 'TraceTable',
+              spec: {
+                links: {
+                  trace: linkToTrace,
+                },
+              },
+            },
+          },
         }}
       />
     </Stack>
   );
 }
 
-function TracingGanttChartPanel({ queries }: { queries: QueryDefinition[] }): ReactElement {
+interface TracingGanttChartPanelProps {
+  queries: QueryDefinition[];
+  selectedSpanId?: string;
+}
+
+function TracingGanttChartPanel(props: TracingGanttChartPanelProps): ReactElement {
+  const { queries, selectedSpanId } = props;
+  const firstQuery = (queries[0]?.spec.plugin.spec as TempoTraceQuerySpec | undefined)?.query;
+
   return (
     <Panel
-      panelOptions={{
-        hideHeader: true,
-      }}
+      panelOptions={{ showIcons: 'always' }}
       definition={{
         kind: 'Panel',
-        spec: { queries, display: { name: '' }, plugin: { kind: 'TracingGanttChart', spec: {} } },
+        spec: {
+          queries,
+          display: { name: `Trace ${firstQuery}` },
+          plugin: {
+            kind: 'TracingGanttChart',
+            spec: {
+              links: {
+                trace: linkToTrace,
+                span: linkToSpan,
+              },
+              selectedSpanId,
+            },
+          },
+        },
       }}
     />
   );
@@ -92,7 +134,7 @@ function TracingGanttChartPanel({ queries }: { queries: QueryDefinition[] }): Re
 
 export function TempoExplorer(): ReactElement {
   const {
-    data: { queries = [] },
+    data: { queries = [], spanId: selectedSpanId },
     setData,
   } = useExplorerManagerContext<TracesExplorerQueryParams>();
 
@@ -106,12 +148,8 @@ export function TempoExplorer(): ReactElement {
       })
     : [];
 
-  // Cannot cast to TempoTraceQuerySpec because 'tempo-plugin' types are not accessible in @perses-dev/explore
-  const isSingleTrace =
-    queries.length === 1 &&
-    queries[0]?.kind === 'TraceQuery' &&
-    queries[0]?.spec.plugin.kind === 'TempoTraceQuery' &&
-    isValidTraceId((queries[0]?.spec.plugin.spec as any).query ?? ''); // eslint-disable-line @typescript-eslint/no-explicit-any
+  const firstQuery = (queries[0]?.spec.plugin.spec as TempoTraceQuerySpec | undefined)?.query;
+  const isSingleTrace = isValidTraceId(firstQuery ?? '');
 
   return (
     <Stack gap={2} sx={{ width: '100%' }}>
@@ -124,7 +162,11 @@ export function TempoExplorer(): ReactElement {
       <ErrorBoundary FallbackComponent={ErrorAlert} resetKeys={[queries]}>
         <DataQueriesProvider definitions={definitions}>
           <Box height={700}>
-            {isSingleTrace ? <TracingGanttChartPanel queries={queries} /> : <SearchResultsPanel queries={queries} />}
+            {isSingleTrace ? (
+              <TracingGanttChartPanel queries={queries} selectedSpanId={selectedSpanId} />
+            ) : (
+              <SearchResultsPanel queries={queries} />
+            )}
           </Box>
         </DataQueriesProvider>
       </ErrorBoundary>

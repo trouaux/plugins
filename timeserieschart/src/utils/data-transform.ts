@@ -39,6 +39,7 @@ import {
   NEGATIVE_MIN_VALUE_MULTIPLIER,
   TimeSeriesChartVisualOptions,
   TimeSeriesChartYAxisOptions,
+  LineStyleType,
 } from '../time-series-chart-model';
 
 export type RunningQueriesState = ReturnType<typeof useTimeSeriesQueries>;
@@ -64,65 +65,7 @@ export function getCommonTimeScaleForQueries(queries: Array<PanelData<TimeSeries
 }
 
 /**
- * [DEPRECATED] Gets ECharts line series option properties for legacy LineChart
- */
-export function getLineSeries(
-  id: string,
-  formattedName: string,
-  data: LegacyTimeSeries['data'],
-  visual: TimeSeriesChartVisualOptions,
-  paletteColor?: string
-): LegacyTimeSeries {
-  const lineWidth = visual.lineWidth ?? DEFAULT_LINE_WIDTH;
-  const pointRadius = visual.pointRadius ?? DEFAULT_POINT_RADIUS;
-
-  // Shows datapoint symbols when selected time range is roughly 15 minutes or less
-  let showPoints = data !== undefined && data.length <= HIDE_DATAPOINTS_LIMIT;
-  // Allows overriding default behavior and opt-in to always show all symbols (can hurt performance)
-  if (visual.showPoints === 'always') {
-    showPoints = true;
-  }
-
-  return {
-    type: 'line',
-    id: id,
-    name: formattedName,
-    data: data,
-    connectNulls: visual.connectNulls ?? DEFAULT_CONNECT_NULLS,
-    color: paletteColor,
-    stack: visual.stack === 'all' ? visual.stack : undefined,
-    sampling: 'lttb',
-    progressiveThreshold: OPTIMIZED_MODE_SERIES_LIMIT, // https://echarts.apache.org/en/option.html#series-lines.progressiveThreshold
-    showSymbol: showPoints,
-    showAllSymbol: true,
-    symbolSize: pointRadius,
-    lineStyle: {
-      width: lineWidth,
-      opacity: 0.8,
-    },
-    areaStyle: {
-      opacity: visual.areaOpacity ?? DEFAULT_AREA_OPACITY,
-    },
-    // https://echarts.apache.org/en/option.html#series-line.emphasis
-    emphasis: {
-      focus: 'series',
-      disabled: visual.areaOpacity !== undefined && visual.areaOpacity > 0, // prevents flicker when moving cursor between shaded regions
-      lineStyle: {
-        width: lineWidth + 1.5,
-        opacity: 1,
-      },
-    },
-    blur: {
-      lineStyle: {
-        width: lineWidth,
-        opacity: BLUR_FADEOUT_OPACITY,
-      },
-    },
-  };
-}
-
-/**
- * Gets ECharts line series option properties for recommended TimeChart
+ * Gets ECharts line series option properties for regular trends
  */
 export function getTimeSeries(
   id: string,
@@ -130,7 +73,8 @@ export function getTimeSeries(
   formattedName: string,
   visual: TimeSeriesChartVisualOptions,
   timeScale: TimeScale,
-  paletteColor: string
+  paletteColor: string,
+  querySettings?: { lineStyle?: LineStyleType; areaOpacity?: number }
 ): TimeSeriesOption {
   const lineWidth = visual.lineWidth ?? DEFAULT_LINE_WIDTH;
   const pointRadius = visual.pointRadius ?? DEFAULT_POINT_RADIUS;
@@ -173,10 +117,10 @@ export function getTimeSeries(
     symbolSize: pointRadius,
     lineStyle: {
       width: lineWidth,
-      opacity: 0.95,
+      type: (querySettings?.lineStyle ?? visual.lineStyle) as LineStyleType,
     },
     areaStyle: {
-      opacity: visual.areaOpacity ?? DEFAULT_AREA_OPACITY,
+      opacity: querySettings?.areaOpacity ?? visual.areaOpacity ?? DEFAULT_AREA_OPACITY,
     },
     // https://echarts.apache.org/en/option.html#series-line.emphasis
     emphasis: {
@@ -185,6 +129,7 @@ export function getTimeSeries(
       lineStyle: {
         width: lineWidth + 1,
         opacity: 1,
+        type: visual.lineStyle,
       },
     },
     selectedMode: 'single',
@@ -198,6 +143,7 @@ export function getTimeSeries(
       lineStyle: {
         width: lineWidth,
         opacity: BLUR_FADEOUT_OPACITY,
+        type: visual.lineStyle,
       },
     },
   };

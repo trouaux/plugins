@@ -32,12 +32,14 @@ const treeViewCloseStr = 'Close ' + treeViewStr;
 export type PromQLEditorProps = {
   completeConfig: CompleteConfiguration;
   datasource: PrometheusDatasourceSelector;
+  isReadOnly?: boolean;
 } & Omit<ReactCodeMirrorProps, 'theme' | 'extensions'>;
 
-export function PromQLEditor({ completeConfig, datasource, ...rest }: PromQLEditorProps): ReactElement {
+export function PromQLEditor({ completeConfig, datasource, isReadOnly, ...rest }: PromQLEditorProps): ReactElement {
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
   const [isTreeViewVisible, setTreeViewVisible] = useState(false);
+  const readOnly = isReadOnly ?? false;
 
   const promQLExtension = useMemo(() => {
     return new PromQLExtension().activateLinter(false).setComplete(completeConfig).asExtension();
@@ -73,10 +75,13 @@ export function PromQLEditor({ completeConfig, datasource, ...rest }: PromQLEdit
       >
         PromQL Expression
       </InputLabel>
+      {/* TODO: We need to wait for this to be merged, then we need to add proper e2e for some scenarios */}
       <CodeMirror
+        data-testid="promql_expression_editor"
         {...rest}
         style={{ border: `1px solid ${theme.palette.divider}` }}
         theme={isDarkMode ? 'dark' : 'light'}
+        readOnly={readOnly}
         basicSetup={{
           highlightActiveLine: false,
           highlightActiveLineGutter: false,

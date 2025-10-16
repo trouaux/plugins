@@ -19,7 +19,7 @@ import {
   VariableOption,
 } from '@perses-dev/plugin-system';
 import { produce } from 'immer';
-import { ReactElement } from 'react';
+import { ReactElement, useCallback, useState } from 'react';
 import { PromQLEditor } from '../components';
 import {
   DEFAULT_PROM,
@@ -37,26 +37,61 @@ import {
   PrometheusPromQLVariableOptions,
 } from './types';
 
+/* TODO: 
+Open Question for later improvement
+The usage of direct onchange here causes an immediate spec update which eventually updates the panel
+This was probably intentional to allow for quick switching between values.
+Shouldn't we update the panel only through the Run Query Button? 
+I think we should only track the changes and let the button to Run the query
+*/
+
 export function PrometheusLabelValuesVariableEditor(
   props: OptionsEditorProps<PrometheusLabelValuesVariableOptions>
 ): ReactElement {
-  const { onChange, value } = props;
-  const { datasource } = value;
+  const {
+    onChange,
+    value,
+    value: { datasource },
+    queryHandlerSettings,
+  } = props;
   const selectedDatasource = datasource ?? DEFAULT_PROM;
+  const [labelValue, setLabelValue] = useState(props.value.labelName);
+  const [matchersValues, setMatchersValues] = useState(props.value.matchers ?? []);
+  const handleDatasourceChange: DatasourceSelectProps['onChange'] = useCallback(
+    (next) => {
+      if (isPrometheusDatasourceSelector(next)) {
+        onChange(
+          produce(value, (draft) => {
+            // If they're using the default, just omit the datasource prop (i.e. set to undefined)
+            draft.datasource = isDefaultPromSelector(next) ? undefined : next;
+          })
+        );
+        if (queryHandlerSettings?.setWatchOtherSpecs)
+          queryHandlerSettings.setWatchOtherSpecs({ ...value, datasource: next });
+        return;
+      }
 
-  const handleDatasourceChange: DatasourceSelectProps['onChange'] = (next) => {
-    if (isPrometheusDatasourceSelector(next)) {
-      onChange(
-        produce(value, (draft) => {
-          // If they're using the default, just omit the datasource prop (i.e. set to undefined)
-          draft.datasource = isDefaultPromSelector(next) ? undefined : next;
-        })
-      );
-      return;
-    }
+      throw new Error('Got unexpected non-Prometheus datasource selector');
+    },
+    [onChange, queryHandlerSettings, value]
+  );
 
-    throw new Error('Got unexpected non-Prometheus datasource selector');
-  };
+  const handleLabelChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setLabelValue(e.target.value);
+      if (queryHandlerSettings?.setWatchOtherSpecs)
+        queryHandlerSettings.setWatchOtherSpecs({ ...value, labelName: e.target.value });
+    },
+    [value, queryHandlerSettings]
+  );
+
+  const handleMatchEditorsChange = useCallback(
+    (e: string[]) => {
+      setMatchersValues(e);
+      if (queryHandlerSettings?.setWatchOtherSpecs) queryHandlerSettings.setWatchOtherSpecs({ ...value, matchers: e });
+    },
+    [value, queryHandlerSettings]
+  );
 
   return (
     <Stack spacing={2}>
@@ -73,21 +108,13 @@ export function PrometheusLabelValuesVariableEditor(
       <TextField
         label="Label Name"
         required
-        value={props.value.labelName}
-        onChange={(e) => {
-          props.onChange({ ...props.value, labelName: e.target.value });
-        }}
+        value={labelValue}
+        onChange={handleLabelChange}
         InputProps={{
           readOnly: props.isReadonly,
         }}
       />
-      <MatcherEditor
-        matchers={props.value.matchers ?? []}
-        onChange={(e) => {
-          props.onChange({ ...props.value, matchers: e });
-        }}
-        isReadonly={props.isReadonly}
-      />
+      <MatcherEditor matchers={matchersValues} onChange={handleMatchEditorsChange} isReadonly={props.isReadonly} />
     </Stack>
   );
 }
@@ -95,23 +122,43 @@ export function PrometheusLabelValuesVariableEditor(
 export function PrometheusLabelNamesVariableEditor(
   props: OptionsEditorProps<PrometheusLabelNamesVariableOptions>
 ): ReactElement {
-  const { onChange, value } = props;
-  const { datasource } = value;
+  const {
+    onChange,
+    value,
+    value: { datasource },
+    queryHandlerSettings,
+  } = props;
+
   const selectedDatasource = datasource ?? DEFAULT_PROM;
+  const [matchersValues, setMatchersValues] = useState(props.value.matchers ?? []);
+  const handleDatasourceChange: DatasourceSelectProps['onChange'] = useCallback(
+    (next) => {
+      if (isPrometheusDatasourceSelector(next)) {
+        onChange(
+          produce(value, (draft) => {
+            // If they're using the default, just omit the datasource prop (i.e. set to undefined)
+            draft.datasource = isDefaultPromSelector(next) ? undefined : next;
+          })
+        );
+        if (queryHandlerSettings?.setWatchOtherSpecs)
+          queryHandlerSettings.setWatchOtherSpecs({ ...value, datasource: next });
+        return;
+      }
 
-  const handleDatasourceChange: DatasourceSelectProps['onChange'] = (next) => {
-    if (isPrometheusDatasourceSelector(next)) {
-      onChange(
-        produce(value, (draft) => {
-          // If they're using the default, just omit the datasource prop (i.e. set to undefined)
-          draft.datasource = isDefaultPromSelector(next) ? undefined : next;
-        })
-      );
-      return;
-    }
+      throw new Error('Got unexpected non-Prometheus datasource selector');
+    },
+    [onChange, queryHandlerSettings, value]
+  );
 
-    throw new Error('Got unexpected non-Prometheus datasource selector');
-  };
+  const handleMatchEditorChange = useCallback(
+    (e: string[]) => {
+      setMatchersValues(e);
+      if (queryHandlerSettings?.setWatchOtherSpecs) {
+        queryHandlerSettings.setWatchOtherSpecs({ ...value, matchers: e });
+      }
+    },
+    [value, queryHandlerSettings]
+  );
 
   return (
     <Stack spacing={2}>
@@ -125,13 +172,7 @@ export function PrometheusLabelNamesVariableEditor(
           label="Prometheus Datasource"
         />
       </FormControl>
-      <MatcherEditor
-        matchers={props.value.matchers ?? []}
-        isReadonly={props.isReadonly}
-        onChange={(e) => {
-          props.onChange({ ...props.value, matchers: e });
-        }}
-      />
+      <MatcherEditor matchers={matchersValues} isReadonly={props.isReadonly} onChange={handleMatchEditorChange} />
     </Stack>
   );
 }
@@ -139,26 +180,59 @@ export function PrometheusLabelNamesVariableEditor(
 export function PrometheusPromQLVariableEditor(
   props: OptionsEditorProps<PrometheusPromQLVariableOptions>
 ): ReactElement {
-  const { onChange, value } = props;
-  const { datasource } = value;
+  const {
+    onChange,
+    value,
+    value: { datasource },
+    queryHandlerSettings,
+  } = props;
   const selectedDatasource = datasource ?? DEFAULT_PROM;
 
   const { data: client } = useDatasourceClient<PrometheusClient>(selectedDatasource);
   const promURL = client?.options.datasourceUrl;
+  const [labelValue, setLableValue] = useState(props.value.labelName);
+  const handleDatasourceChange: DatasourceSelectProps['onChange'] = useCallback(
+    (next) => {
+      if (isPrometheusDatasourceSelector(next)) {
+        onChange(
+          produce(value, (draft) => {
+            // If they're using the default, just omit the datasource prop (i.e. set to undefined)
+            draft.datasource = isDefaultPromSelector(next) ? undefined : next;
+          })
+        );
+        if (queryHandlerSettings?.setWatchOtherSpecs)
+          queryHandlerSettings?.setWatchOtherSpecs({ ...value, datasource: next });
+        return;
+      }
 
-  const handleDatasourceChange: DatasourceSelectProps['onChange'] = (next) => {
-    if (isPrometheusDatasourceSelector(next)) {
-      onChange(
-        produce(value, (draft) => {
-          // If they're using the default, just omit the datasource prop (i.e. set to undefined)
-          draft.datasource = isDefaultPromSelector(next) ? undefined : next;
-        })
-      );
-      return;
-    }
+      throw new Error('Got unexpected non-Prometheus datasource selector');
+    },
+    [value, onChange, queryHandlerSettings]
+  );
 
-    throw new Error('Got unexpected non-Prometheus datasource selector');
-  };
+  const handleOnBlurPromQlChange = useCallback(
+    (e: React.FocusEvent<HTMLDivElement, Element>) => {
+      onChange({ ...value, expr: e.target.textContent ?? '' });
+    },
+    [onChange, value]
+  );
+
+  const trackPromQlChanges = useCallback(
+    (e: React.FocusEvent<HTMLDivElement, Element>) => {
+      if (queryHandlerSettings?.setWatchOtherSpecs)
+        queryHandlerSettings?.setWatchOtherSpecs({ ...value, expr: e.target.textContent ?? '' });
+    },
+    [queryHandlerSettings, value]
+  );
+
+  const handleLabelNameChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      setLableValue(e.target.value);
+      if (queryHandlerSettings?.setWatchOtherSpecs)
+        queryHandlerSettings?.setWatchOtherSpecs({ ...value, labelName: e.target.value });
+    },
+    [queryHandlerSettings, value]
+  );
 
   return (
     <Stack spacing={2}>
@@ -176,21 +250,18 @@ export function PrometheusPromQLVariableEditor(
         completeConfig={{ remote: { url: promURL } }}
         value={value.expr}
         datasource={selectedDatasource}
-        onBlur={(event) => {
-          props.onChange({ ...props.value, expr: event.target.textContent ?? '' });
-        }}
+        onBlur={queryHandlerSettings?.runWithOnBlur ? handleOnBlurPromQlChange : trackPromQlChanges}
         readOnly={props.isReadonly}
         width="100%"
       />
       <TextField
         label="Label Name"
-        value={props.value.labelName}
+        required
+        value={labelValue}
         InputProps={{
           readOnly: props.isReadonly,
         }}
-        onChange={(e) => {
-          props.onChange({ ...props.value, labelName: e.target.value });
-        }}
+        onChange={handleLabelNameChange}
       />
     </Stack>
   );
