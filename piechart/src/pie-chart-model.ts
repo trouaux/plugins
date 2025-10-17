@@ -24,13 +24,13 @@ export interface BarChartDefinition extends Definition<PieChartOptions> {
 }
 
 export interface PieChartOptions {
-  legend?: LegendSpecOptions;
   calculation: CalculationType;
-  radius: number;
   format?: FormatOptions;
-  sort?: SortOption;
+  legend?: LegendSpecOptions;
   mode?: ModeOption;
   queryColors?: Record<number, string>;
+  radius: number;
+  sort?: SortOption;
 }
 
 export type PieChartOptionsEditorProps = OptionsEditorProps<PieChartOptions>;

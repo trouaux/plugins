@@ -19,21 +19,24 @@ import {
   Stack,
   TextField,
   Typography,
+  useTheme,
 } from '@mui/material';
-import { OptionsColorPicker } from '@perses-dev/components';
+import { OptionsColorPicker, useChartsTheme } from '@perses-dev/components';
 import React, { ReactElement, useMemo } from 'react';
 import DeleteIcon from 'mdi-material-ui/DeleteOutline';
 import AddIcon from 'mdi-material-ui/Plus';
 import { produce } from 'immer';
 import { useQueryCountContext } from '@perses-dev/plugin-system';
 import { PieChartOptions, PieChartOptionsEditorProps } from './pie-chart-model';
-
-const DEFAULT_COLOR_VALUE = '#1976d2';
+import { getCategoricalPaletteColor } from './utils';
 
 export function QueryColorEditor(props: PieChartOptionsEditorProps): ReactElement {
   const { onChange, value } = props;
   const queryColors = value.queryColors || {};
   const queryCount = useQueryCountContext();
+  const chartsTheme = useChartsTheme();
+  const muiTheme = useTheme();
+  const categoricalPalette = chartsTheme.echartsTheme.color;
 
   const handleQueryColorsChange = (newQueryColors: Record<number, string>) => {
     onChange(
@@ -65,7 +68,13 @@ export function QueryColorEditor(props: PieChartOptionsEditorProps): ReactElemen
   }, [queryColors, queryCount]);
 
   const addQueryColor = (queryIndex: number): void => {
-    handleColorChange(queryIndex, DEFAULT_COLOR_VALUE);
+    // Use the current theme palette color for this query as the default
+    const defaultColor = getCategoricalPaletteColor(
+      categoricalPalette as string[],
+      queryIndex,
+      muiTheme.palette.primary.main
+    );
+    handleColorChange(queryIndex, defaultColor);
   };
 
   // Get entries sorted by query index

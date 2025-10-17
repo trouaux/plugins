@@ -18,6 +18,7 @@ import {
   DatasetComponent,
   TitleComponent,
   TooltipComponent,
+  LegendComponent,
   LegendComponentOption,
 } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
@@ -25,10 +26,7 @@ import { Box } from '@mui/material';
 import { ReactElement } from 'react';
 import { EChart, useChartsTheme } from '@perses-dev/components';
 
-use([EChartsPieChart, GridComponent, DatasetComponent, TitleComponent, TooltipComponent, CanvasRenderer]);
-
-const PIE_WIN_WIDTH = 12;
-const PIE_GAP = 4;
+use([EChartsPieChart, GridComponent, DatasetComponent, TitleComponent, TooltipComponent, LegendComponent, CanvasRenderer]);
 export interface PieChartData {
   id?: string;
   name: string;
@@ -47,25 +45,17 @@ export function PieChartBase(props: PieChartBaseProps): ReactElement {
   const chartsTheme = useChartsTheme();
 
   const option = {
-    title: {
-      text: 'Referer of a Website',
-      subtext: 'Fake Data',
-      left: 'center',
-    },
     tooltip: {
       trigger: 'item',
-      formatter: '{b} : {c} ({d}%)',
+      formatter: '{b}: {c} ({d}%)',
     },
-    axisLabel: {
-      overflow: 'truncate',
-      width: width / 3,
-    },
+    legend: props.legend,
     series: [
       {
         type: 'pie',
         radius: '55%',
         label: false,
-        center: ['40%', '50%'],
+        center: ['50%', '50%'],
         data: data,
         emphasis: {
           itemStyle: {
@@ -74,12 +64,11 @@ export function PieChartBase(props: PieChartBaseProps): ReactElement {
             shadowColor: 'rgba(0, 0, 0, 0.5)',
           },
         },
+        itemStyle: {
+          borderRadius: 2,
+        },
       },
     ],
-    itemStyle: {
-      borderRadius: 2,
-      color: chartsTheme.echartsTheme[0],
-    },
   };
 
   return (
@@ -92,8 +81,8 @@ export function PieChartBase(props: PieChartBaseProps): ReactElement {
     >
       <EChart
         sx={{
-          minHeight: height,
-          height: data ? data.length * (PIE_WIN_WIDTH + PIE_GAP) : '100%',
+          width: '100%',
+          height: '100%',
         }}
         option={option}
         theme={chartsTheme.echartsTheme}

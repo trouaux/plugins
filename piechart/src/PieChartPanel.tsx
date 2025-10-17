@@ -26,10 +26,34 @@ import { CalculationType, CalculationsMap, DEFAULT_LEGEND, TimeSeriesData } from
 import { PanelProps, validateLegendSpec } from '@perses-dev/plugin-system';
 import merge from 'lodash/merge';
 import { ReactElement, useMemo, useRef, useState } from 'react';
-import { getSeriesColor, getCategoricalPaletteColor } from './palette-gen';
 import { PieChartOptions } from './pie-chart-model';
-import { calculatePercentages, sortSeriesData } from './utils';
+import { calculatePercentages, sortSeriesData, getCategoricalPaletteColor } from './utils';
 import { PieChartBase, PieChartData } from './PieChartBase';
+
+// Helper function to generate gradient colors for series within a query
+function generateGradientColor(baseColor: string, gradientFactor: number): string {
+  // Convert hex color to RGB
+  const hex = baseColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Create gradient by adjusting brightness
+  // gradientFactor 0 = lighter, gradientFactor 1 = darker
+  const factor = 0.3 + (gradientFactor * 0.7); // Range from 0.3 to 1.0
+  
+  const newR = Math.round(r * factor);
+  const newG = Math.round(g * factor);
+  const newB = Math.round(b * factor);
+  
+  // Convert back to hex
+  const toHex = (n: number) => {
+    const hex = n.toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  };
+  
+  return `#${toHex(newR)}${toHex(newG)}${toHex(newB)}`;
+}
 
 // Local legend configuration for pie chart
 type ComparisonValues = 'abs' | 'relative';
@@ -58,42 +82,48 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
     const legendItems: LegendItem[] = [];
     const legendColumns: Array<TableColumnConfig<LegendItem>> = [];
 
-    let globalSeriesIndex = 0; // Track global series index across all queries
-
-    for (let queryIndex = 0; queryIndex < queryResults.length; queryIndex++) {
-      const result = queryResults[queryIndex];
-
-      let seriesIndex = 0;
-      for (const seriesData of result?.data.series ?? []) {
-        // Use custom color if defined for this query, otherwise use categorical palette
-        const seriesColor = queryColors?.[queryIndex] || getCategoricalPaletteColor(
-          categoricalPalette as string[],
-          globalSeriesIndex,
-          muiTheme.palette.primary.main
-        );
+    let globalSeriesIndex = 0;
+    queryResults.forEach((result, queryIndex) => {
+      const series = result?.data.series ?? [];
+      const hasCustomColor = queryColors?.[queryIndex];
+      
+      series.forEach((seriesData, seriesIndex) => {
+        let seriesColor: string;
+        
+        if (hasCustomColor) {
+          // If custom color is set for this query, use gradient for multiple series
+          const seriesCount = series.length;
+          seriesColor = seriesCount > 1 
+            ? generateGradientColor(hasCustomColor, seriesIndex / Math.max(seriesCount - 1, 1))
+            : hasCustomColor;
+        } else {
+          // No custom color: use theme palette colors for each series
+          seriesColor = getCategoricalPaletteColor(
+            categoricalPalette as string[],
+            globalSeriesIndex,
+            muiTheme.palette.primary.main
+          );
+        }
 
         const seriesId = `${chartId}${seriesData.name}${seriesIndex}${queryIndex}`;
-
-        const series = {
+        const seriesItem = {
           id: seriesId,
           value: calculate(seriesData.values) ?? null,
           name: seriesData.formattedName ?? '',
-          itemStyle: {
-            color: seriesColor,
-          },
+          itemStyle: { color: seriesColor },
         };
-        pieChartData.push(series);
 
+        pieChartData.push(seriesItem);
         legendItems.push({
           id: seriesId,
-          label: series.name,
+          label: seriesItem.name,
           color: seriesColor,
           data: {},
         });
-        seriesIndex++;
-        globalSeriesIndex++; // Increment global index for next series
-      }
-    }
+        
+        globalSeriesIndex++;
+      });
+    });
 
     const sortedPieChartData = sortSeriesData(pieChartData, sort);
 
