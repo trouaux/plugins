@@ -27,33 +27,29 @@ export function calculatePercentages(data: PieChartData[]): Array<{ id?: string;
 }
 
 export function sortSeriesData(data: PieChartData[], sortOrder: SortOption = DEFAULT_SORT): PieChartData[] {
-  if (sortOrder === 'asc') {
-    // sort in ascending order by value
-    return data.sort((a, b) => {
-      if (a.value === null) {
-        return 1;
-      }
-      if (b.value === null) {
-        return -1;
-      }
-      if (a.value === b.value) {
-        return 0;
-      }
-      return a.value < b.value ? 1 : -1;
-    });
-  } else {
-    // sort in descending order by value
-    return data.sort((a, b) => {
-      if (a.value === null) {
-        return -1;
-      }
-      if (b.value === null) {
-        return 1;
-      }
-      if (a.value === b.value) {
-        return 0;
-      }
-      return a.value < b.value ? -1 : 1;
-    });
+  return data.sort((a, b) => {
+    // Handle null values - push them to the end regardless of sort order
+    if (a.value === null && b.value === null) return 0;
+    if (a.value === null) return 1;
+    if (b.value === null) return -1;
+    
+    // Sort by value
+    const diff = (a.value ?? 0) - (b.value ?? 0);
+    return sortOrder === 'asc' ? diff : -diff;
+  });
+}
+
+/**
+ * Default classical qualitative palette that cycles through the colors array by index.
+ */
+export function getCategoricalPaletteColor(palette: string[], seriesIndex: number, fallbackColor: string): string {
+  if (palette === undefined) {
+    return fallbackColor;
   }
+  // Loop through predefined static color palette
+  const paletteTotalColors = palette.length ?? 1;
+  const paletteIndex = seriesIndex % paletteTotalColors;
+  // fallback color comes from echarts theme
+  const seriesColor = palette[paletteIndex] ?? fallbackColor;
+  return seriesColor;
 }
