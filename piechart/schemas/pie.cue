@@ -31,4 +31,5 @@ spec: close({
 	sort?:          "asc" | "desc"
 	mode?:          "value" | "percentage"
 	radius:         number
+	queryColors?: [string]: string
 })

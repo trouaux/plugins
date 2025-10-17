@@ -36,6 +36,7 @@ import { CalculationType, isPercentUnit, FormatOptions } from '@perses-dev/core'
 import { Button } from '@mui/material';
 import { ReactElement } from 'react';
 import { PieChartOptions, PieChartOptionsEditorProps, DEFAULT_FORMAT } from './pie-chart-model';
+import { QueryColorEditor } from './QueryColorEditor';
 
 export function PieChartOptionsEditorSettings(props: PieChartOptionsEditorProps): ReactElement {
   const { onChange, value } = props;
@@ -87,7 +88,7 @@ export function PieChartOptionsEditorSettings(props: PieChartOptionsEditorProps)
   return (
     <OptionsEditorGrid>
       <OptionsEditorColumn>
-        <LegendOptionsEditor calculation="comparison" value={value.legend} onChange={handleLegendChange} />
+        <LegendOptionsEditor value={value.legend} onChange={handleLegendChange} />
         <OptionsEditorGroup title="Misc">
           <FormatControls value={format} onChange={handleUnitChange} disabled={value.mode === 'percentage'} />
           <CalculationSelector value={value.calculation} onChange={handleCalculationChange} />
@@ -96,6 +97,9 @@ export function PieChartOptionsEditorSettings(props: PieChartOptionsEditorProps)
         </OptionsEditorGroup>
       </OptionsEditorColumn>
       <OptionsEditorColumn>
+        <OptionsEditorGroup title="Colors">
+          <QueryColorEditor value={value} onChange={onChange} />
+        </OptionsEditorGroup>
         <OptionsEditorGroup title="Reset Settings">
           <Button
             variant="outlined"
@@ -105,6 +109,7 @@ export function PieChartOptionsEditorSettings(props: PieChartOptionsEditorProps)
                 produce(value, (draft: PieChartOptions) => {
                   // reset button removes all optional panel options
                   draft.legend = undefined;
+                  draft.queryColors = undefined;
                 })
               );
             }}

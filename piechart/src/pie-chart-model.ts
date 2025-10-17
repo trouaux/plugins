@@ -30,6 +30,7 @@ export interface PieChartOptions {
   format?: FormatOptions;
   sort?: SortOption;
   mode?: ModeOption;
+  queryColors?: Record<number, string>;
 }
 
 export type PieChartOptionsEditorProps = OptionsEditorProps<PieChartOptions>;

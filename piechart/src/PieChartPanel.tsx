@@ -23,19 +23,26 @@ import {
   useId,
 } from '@perses-dev/components';
 import { CalculationType, CalculationsMap, DEFAULT_LEGEND, TimeSeriesData } from '@perses-dev/core';
-import { comparisonLegends, ComparisonValues, PanelProps, validateLegendSpec } from '@perses-dev/plugin-system';
+import { PanelProps, validateLegendSpec } from '@perses-dev/plugin-system';
 import merge from 'lodash/merge';
 import { ReactElement, useMemo, useRef, useState } from 'react';
-import { getSeriesColor } from './palette-gen';
+import { getSeriesColor, getCategoricalPaletteColor } from './palette-gen';
 import { PieChartOptions } from './pie-chart-model';
 import { calculatePercentages, sortSeriesData } from './utils';
 import { PieChartBase, PieChartData } from './PieChartBase';
+
+// Local legend configuration for pie chart
+type ComparisonValues = 'abs' | 'relative';
+const comparisonLegends: Record<ComparisonValues, { label: string; description?: string }> = {
+  abs: { label: 'Absolute', description: 'Absolute value' },
+  relative: { label: 'Relative', description: 'Relative value' },
+};
 
 export type PieChartPanelProps = PanelProps<PieChartOptions, TimeSeriesData>;
 
 export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
   const {
-    spec: { calculation, sort, mode, legend: pieChartLegend },
+    spec: { calculation, sort, mode, legend: pieChartLegend, queryColors },
     contentDimensions,
     queryResults,
   } = props;
@@ -51,18 +58,21 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
     const legendItems: LegendItem[] = [];
     const legendColumns: Array<TableColumnConfig<LegendItem>> = [];
 
+    let globalSeriesIndex = 0; // Track global series index across all queries
+
     for (let queryIndex = 0; queryIndex < queryResults.length; queryIndex++) {
       const result = queryResults[queryIndex];
 
       let seriesIndex = 0;
       for (const seriesData of result?.data.series ?? []) {
-        const seriesColor = getSeriesColor({
-          categoricalPalette: categoricalPalette as string[],
-          muiPrimaryColor: muiTheme.palette.primary.main,
-          seriesName: seriesData.name,
-        });
+        // Use custom color if defined for this query, otherwise use categorical palette
+        const seriesColor = queryColors?.[queryIndex] || getCategoricalPaletteColor(
+          categoricalPalette as string[],
+          globalSeriesIndex,
+          muiTheme.palette.primary.main
+        );
 
-        const seriesId = `${chartId}${seriesData.name}${seriesIndex}`;
+        const seriesId = `${chartId}${seriesData.name}${seriesIndex}${queryIndex}`;
 
         const series = {
           id: seriesId,
@@ -81,6 +91,7 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
           data: {},
         });
         seriesIndex++;
+        globalSeriesIndex++; // Increment global index for next series
       }
     }
 
@@ -100,7 +111,7 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
           enableSorting: true,
         });
         /* Then, settle the legend items related to this legend value */
-        switch (v) {
+        switch (v as ComparisonValues) {
           case 'abs':
             legendItems.forEach((li) => {
               const { value: itemAbsoluteValue } = pieChartData.find((pd) => li.id === pd.id) || {};
@@ -138,6 +149,7 @@ export function PieChartPanel(props: PieChartPanelProps): ReactElement | null {
     muiTheme.palette.primary.main,
     chartId,
     pieChartLegend,
+    queryColors,
   ]);
 
   const contentPadding = chartsTheme.container.padding.default;
